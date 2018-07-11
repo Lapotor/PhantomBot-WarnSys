@@ -12,10 +12,10 @@ To install this script you simply need to download the latest release (click on 
 
 [![GitHub release](https://img.shields.io/github/release/Lapotor/PhantomBot-WarnSys.svg?style=for-the-badge)](https://github.com/Lapotor/PhantomBot-WarnSys/release/latest)
 
-![Folder View](.readme-assets/folder-view.png)
+[![Folder View](.readme-assets/folder-view.png)]()
 
 and drop it in your PhantomBot folder `/path/to/phatombot`. Now restart the Bot and when you see this at the end of the startup the script is **active**:
-![Warn System Enabled](.readme-assets/warnsys.png)
+[![Warn System Enabled](.readme-assets/warnsys.png)]()
 
 # Usage
 Its really simple!
@@ -44,6 +44,8 @@ With this command you decrease the warn level of the given user.
 As it say it clear the warnings of the given User
 
 # Support, Bug etc.
+[![GitHub issues](https://img.shields.io/github/issues/Lapotor/PhantomBot-WarnSys.svg?style=for-the-badge)](https://github.com/Lapotor/PhantomBot-WarnSys/issues)
+
 If you found a bug please open a issue here or tell me in the PhantomBot Community.
 
 ---
