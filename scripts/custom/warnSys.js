@@ -33,7 +33,7 @@
     function userStrings(user) {
         var user_mention = "";
         var user_string = "";
-        if (user.charAt(0) === "@"){
+        if (user.substr(0,1) == "@"){
             user_mention = user;
             user_string = user.substr(1);
         } else {
@@ -83,14 +83,6 @@
     }
 
     /**
-     * @function setLang
-     *
-     */
-    function setLang() {
-
-    }
-
-    /**
      * @event command
      */
     $.bind('command', function (event) {
@@ -99,8 +91,7 @@
         var args = event.getArgs();
         var reason = "";
 
-
-        if (args[0] != undefined || args[0] != null) {
+        if (args[0] !== undefined || args[0] != null) {
             if ($.isBot(args[0]) || $.isMod(args[0]) || $.isOwner(args[0]) || $.isAdmin(args[0])) {
                 var user = 0x349;
             } else {
@@ -150,7 +141,7 @@
                         $.say($.lang.get('warnsys.delall.twitch', user[1]));
                         $.consoleLn($.lang.get('warnsys.delall.console', user[1], sender));
                     } else {
-                        $.say("@" + sender + " " + user[1] + " wurde noch nicht Verwarnt.");
+                        $.say($.lang.get('warnsys.warn.none', sender, user[1]));
                     }
                 } else if ($.inidb.exists('warnSystem', user[1])) {
                     if ($.getIniDbNumber('warnSystem', user[1]) == 1) {
