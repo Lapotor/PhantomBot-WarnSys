@@ -14,15 +14,53 @@
 /**
  * warnSys.js
  *
- * @version 1.0.0
+ * @version 2.0.0
  */
 (function () {
 
+    var table_entries = 'warnSysEntries',
+        table_settings = 'warnSysSettings';
+    /**
+     * Table name update
+     */
+    if ($.inidb.FileExists('warnSystem')) {
+        $.inidb.RenameFile('warnSystem', table_entries);
+    }
+
+    /**
+     * Init the Settings table
+     */
+    if (!$.inidb.FileExists(table_settings)) {
+        $.inidb.AddFile(table_settings);
+        /* Step 1 */
+        $.setIniDbNumber(table_settings, 'step_1_value', 5);
+        $.setIniDbString(table_settings, 'step_1_text', "(@name) this is your first warning!");
+        /* Step 2 */
+        $.setIniDbNumber(table_settings, 'step_2_value', 600);
+        $.setIniDbString(table_settings, 'step_2_text', "(@name) this is your last warning! Next time we have to ban you.");
+        /* Step 3 */
+        $.setIniDbNumber(table_settings, 'step_3_value', 0);
+        $.setIniDbString(table_settings, 'step_3_text', "That's it for you (@name). Another wonderful life for you.");
+    }
+
+    /**
+     * @function initText
+     * @return {void}
+     */
     function initText() {
         $.consoleLn("╔═══════════════════╗");
         $.consoleLn("║    Warn System    ║");
         $.consoleLn("║ ░▒▓█ Enabled █▓▒░ ║");
         $.consoleLn("╚═══════════════════╝");
+    }
+
+
+    /**
+     * @function getSteps
+     * @return {number}
+     */
+    function getSteps() {
+        return $.inidb.GetKeyList(table_settings, '').length / 2;
     }
 
     /**
@@ -31,9 +69,9 @@
      * @return {array}
      */
     function userStrings(user) {
-        var user_mention = "";
-        var user_string = "";
-        if (user.charAt(0) === "@"){
+        var user_mention;
+        var user_string;
+        if (user.substr(0, 1) == "@") {
             user_mention = user;
             user_string = user.substr(1);
         } else {
@@ -44,50 +82,55 @@
     }
 
     /**
-     * @function warn1
+     * @function warn
      * @param {string} user
      * @param {string} reason
      * @returns {void}
      */
-    function warn1(user, reason) {
+    function warn(user, reason) {
         user = userStrings(user);
-        $.say(".timeout " + user[1] + " " + $.lang.get('warnsys.warn1.time') + " " + reason);
-        $.say($.lang.get('warnsys.warn1.twitch', user[0]));
-        $.consoleLn($.lang.get('warnsys.warn1.console', user[1]));
+        var steps = getSteps();
+        var step = $.getSetIniDbNumber(table_entries, user[1].toLowerCase(), 0);
+        if (step < steps) {
+            var message;
+            if ($.getIniDbNumber(table_settings, 'step_' + (step + 1) + '_value') != 0) {
+                $.say('.timeout ' + user[1] + ' ' + $.getIniDbNumber(table_settings, 'step_' + (step + 1) + '_value') + ' ' + reason);
+                message = $.getIniDbString(table_settings, 'step_' + (step + 1) + '_text');
+                message = $.replace(message, '(@name)', user[0]);
+                $.say(message);
+            } else {
+                $.say('.ban ' + user[1] + ' ' + reason);
+                message = $.getIniDbString(table_settings, 'step_' + (step + 1) + '_text');
+                message = $.replace(message, '(@name)', user[0]);
+                $.say(message);
+            }
+            $.inidb.incr(table_entries, user[1].toLowerCase(), 1);
+        } else {
+            $.say($.lang.get('warnsys.already', user[1]))
+        }
     }
 
+
     /**
-     * @function warn2
+     * @function delwarn
      * @param {string} user
-     * @param {string} reason
-     * @returns {void}
+     * @param {boolean} complete
+     * @return {void}
      */
-    function warn2(user, reason) {
+    function delwarn(user, sender, complete) {
         user = userStrings(user);
-        $.say(".timeout " + user[1] + " " + $.lang.get('warnsys.warn2.time') + " " + reason);
-        $.say($.lang.get('warnsys.warn2.twitch', user[0]));
-        $.consoleLn($.lang.get('warnsys.warn2.console', user[1]));
-    }
-
-    /**
-     * @function warn3
-     * @param {string} user
-     * @param {string} reason
-     * @returns {void}
-     */
-    function warn3(user, reason) {
-        user = userStrings(user);
-        $.say(".ban " + user[1] + " " + reason);
-        $.say($.lang.get('warnsys.warn3.twitch', user[0]));
-        $.consoleLn($.lang.get('warnsys.warn3.console', user[1]));
-    }
-
-    /**
-     * @function setLang
-     *
-     */
-    function setLang() {
-
+        if ($.inidb.exists(table_entries, user[1].toLowerCase())) {
+            $.say('.unban ' + user[1]);
+            if (complete || $.getIniDbNumber(table_entries, user[1].toLowerCase()) == 1) {
+                $.inidb.del(table_entries, user[1].toLowerCase());
+                $.say($.lang.get('warnsys.delall', user[1]));
+            } else {
+                $.inidb.decr(table_entries, user[1].toLowerCase(), 1);
+                $.say($.lang.get('warnsys.del', user[1]));
+            }
+        } else {
+            $.say($.lang.get('warnsys.warn.none', sender, user[1]));
+        }
     }
 
     /**
@@ -99,8 +142,7 @@
         var args = event.getArgs();
         var reason = "";
 
-
-        if (args[0] != undefined || args[0] != null) {
+        if (args[0] !== undefined || args[0] != null) {
             if ($.isBot(args[0]) || $.isMod(args[0]) || $.isOwner(args[0]) || $.isAdmin(args[0])) {
                 var user = 0x349;
             } else {
@@ -113,7 +155,6 @@
             if (command.equalsIgnoreCase('warn')) {
                 if (user === 0x349) {
                     $.say($.lang.get('warnsys.isstaff.twitch', user[1]));
-                    $.consoleLn($.lang.get('warnsys.isstaff.console', user[1]));
                 } else {
                     for (var i = 1; i < args.length; i++) {
                         reason += args[i];
@@ -121,21 +162,7 @@
                             reason += " ";
                         }
                     }
-
-                    if (!$.inidb.exists('warnSystem', user[1])) {
-                        warn1(args[0], reason);
-                        $.setIniDbNumber('warnSystem', user[1], 1);
-                    } else if ($.getIniDbNumber('warnSystem', user[1]) == 1) {
-                        $.inidb.incr('warnSystem', user[1], 1);
-                        warn2(args[0], reason);
-                    } else if ($.getIniDbNumber('warnSystem', user[1]) == 2) {
-                        $.inidb.incr('warnSystem', user[1], 1);
-                        warn3(args[0], reason);
-                    } else if ($.getIniDbNumber('warnSystem', user[1]) == 3) {
-                        $.say($.lang.get('warnsys.already.twitch', sender, user[1]));
-                    } else {
-                        $.say($.lang.get('warnsys.noexecute.twitch', sender));
-                    }
+                    warn(user[1], reason);
                 }
             }
 
@@ -143,34 +170,14 @@
              * @commandpath delwarn - Remove the given player from the warned list.
              */
             if (command.equalsIgnoreCase('delwarn')) {
-                if ((args[1] != undefined || args[1] != null) && args[1].equalsIgnoreCase('all')) {
-                    if ($.inidb.exists('warnSystem', user[1])) {
-                        $.inidb.del('warnSystem', user[1]);
-                        $.say(".unban " + user[1]);
-                        $.say($.lang.get('warnsys.delall.twitch', user[1]));
-                        $.consoleLn($.lang.get('warnsys.delall.console', user[1], sender));
+                if (args[0] != undefined || args[0] != null) {
+                    if ((args[1] != undefined || args[1] != null) && args[1].equalsIgnoreCase('all')) {
+                        delwarn(user[1], sender, true);
                     } else {
-                        $.say("@" + sender + " " + user[1] + " wurde noch nicht Verwarnt.");
-                    }
-                } else if ($.inidb.exists('warnSystem', user[1])) {
-                    if ($.getIniDbNumber('warnSystem', user[1]) == 1) {
-                        $.say(".unban " + user[1]);
-                        $.say($.lang.get('warnsys.delwarn1.twitch', user[1]));
-                        $.consoleLn($.lang.get('warnsys.delwarn1.console', user[1], sender));
-                        $.inidb.del('warnSystem', user[1]);
-                    } else if ($.getIniDbNumber('warnSystem', user[1]) == 2) {
-                        $.say(".unban " + user[1]);
-                        $.say($.lang.get('warnsys.delwarn2.twitch', user[1]));
-                        $.consoleLn($.lang.get('warnsys.delwarn2.console', user[1], sender));
-                        $.inidb.decr('warnSystem', user[1], 1);
-                    } else if ($.getIniDbNumber('warnSystem', user[1]) == 3) {
-                        $.say(".unban " + args[0]);
-                        $.say($.lang.get('warnsys.delwarn2.twitch', user[1]));
-                        $.consoleLn($.lang.get('warnsys.delwarn2.console', user[1], sender));
-                        $.inidb.decr('warnSystem', user[1], 1);
+                        delwarn(user[1], sender, false);
                     }
                 } else {
-                    $.say($.lang.get('warnsys.warn.none', sender, user[1]));
+                    $.say($.lang.get('warnsys.noexecute', sender));
                 }
             }
         }
